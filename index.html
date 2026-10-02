@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>খরচের হিসাব</title>
+<title>টাকা ও খরচের হিসাব</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#0f766e">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -24,20 +24,56 @@ button{background:var(--ac);color:#fff;border:0;font-weight:600;cursor:pointer}
 .r:last-child{border:0}
 .x{background:none;color:var(--rd);width:auto;margin:0;padding:4px 8px}
 .bar{height:8px;background:var(--ac);border-radius:4px;margin-top:4px}
+.bar.e{background:var(--rd)}
+input[type=date]{color-scheme:light dark;min-height:44px;cursor:pointer}
+.pd{background:none;color:var(--ac);width:auto;margin:0 6px 0 0;padding:6px 10px;border:1px solid var(--ac);border-radius:8px;font-size:14px}
+.late{color:var(--rd)}
+.done{text-decoration:line-through;opacity:.55}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.v{font-size:22px;font-weight:700}
+.inc{color:var(--ac)}
+.exp{color:var(--rd)}
+.tg{display:flex;gap:8px}
+.tg button{margin-top:0;background:var(--bg);color:var(--mu);border:1px solid var(--bd)}
+.tg button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.tg button.on.e{background:var(--rd);border-color:var(--rd)}
+#add.e{background:var(--rd)}
 </style>
 </head>
 <body>
 <div class="w">
-<h1>💰 খরচের হিসাব</h1>
-<div class="c"><div class="mu">এই মাসের মোট খরচ</div><div class="tot" id="tot">৳০</div></div>
+<h1>💰 টাকা ও খরচের হিসাব</h1>
 <div class="c">
-<input id="amt" type="number" inputmode="decimal" placeholder="টাকার পরিমাণ">
-<select id="cat"><option>খাবার</option><option>যাতায়াত</option><option>পড়াশোনা</option><option>বিনোদন</option><option>অন্যান্য</option></select>
-<input id="note" placeholder="বিবরণ (ঐচ্ছিক)">
-<button id="add">খরচ যোগ করো</button>
+<div class="g">
+<div><div class="mu">মোট পেয়েছি</div><div class="v inc" id="inc">৳০</div></div>
+<div><div class="mu">মোট খরচ</div><div class="v exp" id="exp">৳০</div></div>
 </div>
-<div class="c"><b>ক্যাটাগরি অনুযায়ী</b><div id="sum"></div></div>
-<div class="c"><b>সাম্প্রতিক খরচ</b><div id="list"></div></div>
+<div style="margin-top:12px"><div class="mu">হাতে আছে</div><div class="tot" id="tot">৳০</div></div>
+</div>
+<div class="c">
+<div class="tg">
+<button id="tE" class="on e" type="button">খরচ</button>
+<button id="tI" type="button">টাকা পেয়েছি</button>
+</div>
+<input id="amt" type="number" inputmode="decimal" placeholder="টাকার পরিমাণ">
+<input id="who" placeholder="কার কাছ থেকে পেয়েছি?" style="display:none">
+<select id="cat"></select>
+<input id="note" placeholder="বিবরণ (ঐচ্ছিক)">
+<button id="add" class="e">খরচ যোগ করো</button>
+</div>
+<div class="c"><b>ধার / ঋণ</b>
+<div class="mu" id="dTot"></div>
+<input id="dw" placeholder="কার কাছ থেকে নিয়েছি?">
+<input id="da" type="number" inputmode="decimal" placeholder="কত টাকা">
+<div class="mu" style="margin-top:8px">ফেরত দেওয়ার তারিখ (ট্যাপ করে বেছে নিন)</div>
+<input id="dd" type="date" style="margin-top:4px">
+<label class="mu" style="display:flex;gap:8px;align-items:center;margin-top:10px"><input id="dh" type="checkbox" checked style="width:auto;margin:0"> এই টাকা হাতে থাকা টাকায় যোগ করো</label>
+<button id="dadd">ধার যোগ করো</button>
+<div id="dlist" style="margin-top:6px"></div>
+</div>
+<div class="c"><b>কার কাছ থেকে পেয়েছি</b><div id="sumI"></div></div>
+<div class="c"><b>ক্যাটাগরি অনুযায়ী খরচ</b><div id="sumE"></div></div>
+<div class="c"><b>সাম্প্রতিক হিসাব</b><div id="list"></div></div>
 </div>
 <script>
 var SHEET_URL="https://script.google.com/macros/s/AKfycbwqkU23NgXwZhgZJIPNAqyQrsSsNkjoVwGccdZby1GRvAouNi1EMOZLK4IZqziK2MtVzg/exec";
@@ -57,37 +93,144 @@ setQ([]);
 q.forEach(function(it){post(it).catch(function(){var r=getQ();r.push(it);setQ(r)})});
 }
 window.addEventListener("online",flush);
+
+var CATS={
+e:["খাবার","যাতায়াত","পড়াশোনা","বিনোদন","অন্যান্য"],
+i:["ধার","উপহার","সাহায্য","অন্যান্য"]
+};
+var type="e";
 var data=[];
 try{data=JSON.parse(localStorage.getItem("exp")||"[]")}catch(e){}
 function save(){try{localStorage.setItem("exp",JSON.stringify(data))}catch(e){}}
 var bn="০১২৩৪৫৬৭৮৯";
-function f(n){return "৳"+String(Math.round(n*100)/100).replace(/\d/g,function(d){return bn[d]})}
-function render(){
-var t=0,by={};
-data.forEach(function(d){t+=d.a;by[d.c]=(by[d.c]||0)+d.a});
-document.getElementById("tot").textContent=f(t);
+function f(n){return (n<0?"-":"")+"৳"+String(Math.round(Math.abs(n)*100)/100).replace(/\d/g,function(d){return bn[d]})}
+function isInc(d){return d.t==="i"}
+
+function setType(t){
+type=t;
+var e=t==="e";
+document.getElementById("tE").className=e?"on e":"";
+document.getElementById("tI").className=e?"":"on";
+var add=document.getElementById("add");
+add.className=e?"e":"";
+add.textContent=e?"খরচ যোগ করো":"টাকা যোগ করো";
+document.getElementById("who").style.display=e?"none":"block";
+var sel=document.getElementById("cat");
+sel.innerHTML=CATS[t].map(function(c){return "<option>"+c+"</option>"}).join("");
+}
+document.getElementById("tE").onclick=function(){setType("e")};
+document.getElementById("tI").onclick=function(){setType("i")};
+
+function bars(by,total,cls){
 var s="";
-Object.keys(by).forEach(function(k){s+='<div style="margin-top:10px"><div class="r" style="border:0;padding:0"><span>'+k+'</span><span>'+f(by[k])+'</span></div><div class="bar" style="width:'+(by[k]/t*100)+'%"></div></div>'});
-document.getElementById("sum").innerHTML=s||'<div class="mu">এখনো কিছু নেই</div>';
+Object.keys(by).forEach(function(k){
+var w=total>0?by[k]/total*100:0;
+s+='<div style="margin-top:10px"><div class="r" style="border:0;padding:0"><span>'+k+'</span><span>'+f(by[k])+'</span></div><div class="bar '+cls+'" style="width:'+w+'%"></div></div>';
+});
+return s||'<div class="mu">এখনো কিছু নেই</div>';
+}
+
+function render(){
+var ti=0,te=0,bi={},be={};
+data.forEach(function(d){
+if(isInc(d)){var w=d.w||"নাম দেওয়া নেই";ti+=d.a;bi[w]=(bi[w]||0)+d.a}
+else{te+=d.a;be[d.c]=(be[d.c]||0)+d.a}
+});
+document.getElementById("inc").textContent=f(ti);
+document.getElementById("exp").textContent=f(te);
+document.getElementById("tot").textContent=f(ti-te);
+document.getElementById("sumI").innerHTML=bars(bi,ti,"");
+document.getElementById("sumE").innerHTML=bars(be,te,"e");
 var l="";
 data.slice().reverse().forEach(function(d){
 var i=data.indexOf(d);
-l+='<div class="r"><div><div>'+f(d.a)+' · '+d.c+'</div><div class="mu">'+(d.n||"")+' '+d.d+'</div></div><button class="x" data-i="'+i+'">✕</button></div>'});
+var inc=isInc(d);
+l+='<div class="r"><div><div class="'+(inc?"inc":"exp")+'">'+(inc?"+":"-")+f(d.a)+' · '+d.c+(inc&&d.w?' · '+d.w:'')+'</div><div class="mu">'+(d.n||"")+' '+d.d+'</div></div><button class="x" data-i="'+i+'">✕</button></div>';
+});
 document.getElementById("list").innerHTML=l||'<div class="mu">এখনো কিছু নেই</div>';
 }
+
 document.getElementById("add").onclick=function(){
 var a=parseFloat(document.getElementById("amt").value);
 if(!(a>0))return;
-data.push({a:a,c:document.getElementById("cat").value,n:document.getElementById("note").value.replace(/[<>&]/g,""),d:new Date().toLocaleDateString("bn-BD")});
-document.getElementById("amt").value="";document.getElementById("note").value="";
-sendToSheet({amount:a,category:data[data.length-1].c,note:data[data.length-1].n});
+var item={a:a,t:type,c:document.getElementById("cat").value,w:type==="i"?document.getElementById("who").value.replace(/[<>&]/g,"").trim():"",n:document.getElementById("note").value.replace(/[<>&]/g,""),d:new Date().toLocaleDateString("bn-BD")};
+data.push(item);
+document.getElementById("amt").value="";document.getElementById("note").value="";document.getElementById("who").value="";
+sendToSheet({amount:a,category:item.c,note:item.n,type:type==="i"?"টাকা পেয়েছি":"খরচ",from:item.w});
 save();render();
 };
 document.getElementById("list").onclick=function(e){
 var i=e.target.getAttribute("data-i");
 if(i!==null){data.splice(+i,1);save();render()}
 };
-render();flush();
+
+var debts=[];
+try{debts=JSON.parse(localStorage.getItem("debts")||"[]")}catch(e){}
+function saveD(){try{localStorage.setItem("debts",JSON.stringify(debts))}catch(e){}}
+function bd(n){return String(n).replace(/\d/g,function(d){return bn[d]})}
+function clean(v){return v.replace(/[<>&]/g,"").trim()}
+function renderDebts(){
+var tot=0,order=debts.map(function(d,i){return i});
+order.sort(function(x,y){
+var a=debts[x],b=debts[y];
+if(a.p!==b.p)return a.p?1:-1;
+return (a.due||"9999").localeCompare(b.due||"9999");
+});
+var today=new Date();today.setHours(0,0,0,0);
+var l="";
+order.forEach(function(i){
+var d=debts[i],st="",cls="";
+if(!d.p)tot+=d.a;
+if(d.p){st="পরিশোধ হয়েছে"}
+else if(d.due){
+var diff=Math.round((new Date(d.due+"T00:00:00")-today)/86400000);
+var dt=new Date(d.due+"T00:00:00").toLocaleDateString("bn-BD");
+if(diff<0){st=dt+" · "+bd(-diff)+" দিন দেরি হয়েছে";cls="late"}
+else if(diff===0){st=dt+" · আজই ফেরত দিতে হবে";cls="late"}
+else{st=dt+" · আর "+bd(diff)+" দিন বাকি"}
+}else{st="ফেরত দেওয়ার তারিখ দেওয়া নেই"}
+l+='<div class="r"><div class="'+(d.p?"done":"")+'"><div>'+f(d.a)+' · '+(d.w||"নাম নেই")+'</div><div class="mu '+cls+'">'+st+'</div></div><div style="display:flex"><button class="pd" data-di="'+i+'" data-act="p">'+(d.p?"↩ আবার বাকি":"✓ পরিশোধ হয়েছে")+'</button><button class="x" data-di="'+i+'" data-act="x">✕</button></div></div>';
+});
+document.getElementById("dTot").textContent=debts.length?("মোট বাকি: "+f(tot)):"";
+document.getElementById("dlist").innerHTML=l||'<div class="mu">এখনো কিছু নেই</div>';
+}
+var ddEl=document.getElementById("dd");
+ddEl.onclick=ddEl.onfocus=function(){try{if(this.showPicker)this.showPicker()}catch(e){}};
+document.getElementById("dadd").onclick=function(){
+var a=parseFloat(document.getElementById("da").value);
+if(!(a>0))return;
+var w=clean(document.getElementById("dw").value);
+var due=document.getElementById("dd").value;
+debts.push({id:Date.now(),a:a,w:w,due:due,p:false});
+if(document.getElementById("dh").checked){
+data.push({a:a,t:"i",c:"ধার",w:w,n:"",d:new Date().toLocaleDateString("bn-BD")});
+save();render();
+}
+sendToSheet({amount:a,category:"ঋণ",note:"",type:"ঋণ",from:w,due:due});
+document.getElementById("da").value="";document.getElementById("dw").value="";document.getElementById("dd").value="";
+saveD();renderDebts();
+};
+document.getElementById("dlist").onclick=function(e){
+var i=e.target.getAttribute("data-di");
+if(i===null)return;
+if(e.target.getAttribute("data-act")==="x"){debts.splice(+i,1)}
+else{
+var b=debts[+i];
+if(!b.id)b.id=Date.now()+(+i);
+b.p=!b.p;
+if(b.p){
+var it={a:b.a,t:"e",c:"ঋণ পরিশোধ",w:"",n:(b.w?b.w+" কে ":"")+"ধার ফেরত",d:new Date().toLocaleDateString("bn-BD"),ref:b.id};
+data.push(it);
+sendToSheet({amount:b.a,category:"ঋণ পরিশোধ",note:it.n,type:"খরচ"});
+}else{
+data=data.filter(function(x){return x.ref!==b.id});
+}
+save();render();
+}
+saveD();renderDebts();
+};
+setType("e");
+render();renderDebts();flush();
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(function(){})}
 </script>
 </body>
