@@ -40,6 +40,23 @@ button{background:var(--ac);color:#fff;border:0;font-weight:600;cursor:pointer}
 <div class="c"><b>সাম্প্রতিক খরচ</b><div id="list"></div></div>
 </div>
 <script>
+var SHEET_URL="https://script.google.com/macros/s/AKfycbwqkU23NgXwZhgZJIPNAqyQrsSsNkjoVwGccdZby1GRvAouNi1EMOZLK4IZqziK2MtVzg/exec";
+function post(item){
+return fetch(SHEET_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(item)});
+}
+function getQ(){try{return JSON.parse(localStorage.getItem("pending")||"[]")}catch(e){return []}}
+function setQ(q){try{localStorage.setItem("pending",JSON.stringify(q))}catch(e){}}
+function sendToSheet(item){
+if(!SHEET_URL)return;
+post(item).catch(function(){var q=getQ();q.push(item);setQ(q)});
+}
+function flush(){
+if(!SHEET_URL)return;
+var q=getQ();if(!q.length)return;
+setQ([]);
+q.forEach(function(it){post(it).catch(function(){var r=getQ();r.push(it);setQ(r)})});
+}
+window.addEventListener("online",flush);
 var data=[];
 try{data=JSON.parse(localStorage.getItem("exp")||"[]")}catch(e){}
 function save(){try{localStorage.setItem("exp",JSON.stringify(data))}catch(e){}}
@@ -63,13 +80,14 @@ var a=parseFloat(document.getElementById("amt").value);
 if(!(a>0))return;
 data.push({a:a,c:document.getElementById("cat").value,n:document.getElementById("note").value.replace(/[<>&]/g,""),d:new Date().toLocaleDateString("bn-BD")});
 document.getElementById("amt").value="";document.getElementById("note").value="";
+sendToSheet({amount:a,category:data[data.length-1].c,note:data[data.length-1].n});
 save();render();
 };
 document.getElementById("list").onclick=function(e){
 var i=e.target.getAttribute("data-i");
 if(i!==null){data.splice(+i,1);save();render()}
 };
-render();
+render();flush();
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(function(){})}
 </script>
 </body>
