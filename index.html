@@ -57,6 +57,7 @@ input[type=date]{color-scheme:light dark;min-height:44px;cursor:pointer}
 </div>
 <input id="amt" type="number" inputmode="decimal" placeholder="টাকার পরিমাণ">
 <select id="cat"></select>
+<input id="qty" type="number" inputmode="numeric" min="1" step="1" placeholder="কয়টা সিগারেট?" style="display:none">
 <select id="dsel" style="display:none"></select>
 <input id="who" style="display:none">
 <div class="mu" id="dueL" style="display:none;margin-top:8px"></div>
@@ -91,9 +92,9 @@ q.forEach(function(it){post(it).catch(function(){var r=getQ();r.push(it);setQ(r)
 }
 window.addEventListener("online",flush);
 
-var C_BORROW="ধার নিয়েছি",C_LEND="ধার দিয়েছি",C_PAY="ধার শোধ করলাম",C_GET="ধার ফেরত পেলাম";
+var C_CIG="সিগারেট",C_BORROW="ধার নিয়েছি",C_LEND="ধার দিয়েছি",C_PAY="ধার শোধ করলাম",C_GET="ধার ফেরত পেলাম";
 var CATS={
-e:["খাবার","যাতায়াত","পড়াশোনা","বিনোদন","অন্যান্য",C_PAY,C_LEND],
+e:["খাবার","যাতায়াত","পড়াশোনা","বিনোদন",C_CIG,"অন্যান্য",C_PAY,C_LEND],
 i:["উপহার","সাহায্য","অন্যান্য",C_BORROW,C_GET]
 };
 var type="e";
@@ -119,6 +120,7 @@ add.className=e?"e":"";
 var lbl={};lbl[C_BORROW]="ধার নেওয়া যোগ করো";lbl[C_LEND]="ধার দেওয়া যোগ করো";lbl[C_PAY]="ধার শোধ যোগ করো";lbl[C_GET]="ফেরত পাওয়া যোগ করো";
 add.textContent=lbl[c]||(e?"খরচ যোগ করো":"টাকা যোগ করো");
 var needSel=(c===C_PAY||c===C_GET),needDue=(c===C_BORROW||c===C_LEND),needWho=!needSel&&(type==="i"||c===C_LEND);
+document.getElementById("qty").style.display=(e&&c===C_CIG)?"block":"none";
 var who=document.getElementById("who");
 who.style.display=needWho?"block":"none";
 who.placeholder=c===C_BORROW?"কার কাছ থেকে নিয়েছ? (নাম)":c===C_LEND?"কাকে ধার দিয়েছ? (নাম)":"কার কাছ থেকে পেয়েছি? (ঐচ্ছিক)";
@@ -149,21 +151,21 @@ return s||'<div class="mu">এখনো কিছু নেই</div>';
 }
 
 function render(){
-var ti=0,te=0,bi={},be={};
+var ti=0,te=0,bi={},be={},cq=0;
 data.forEach(function(d){
 if(isInc(d)){var w=d.w||"নাম দেওয়া নেই";ti+=d.a;bi[w]=(bi[w]||0)+d.a}
-else{te+=d.a;be[d.c]=(be[d.c]||0)+d.a}
+else{te+=d.a;be[d.c]=(be[d.c]||0)+d.a;if(d.q)cq+=d.q}
 });
 document.getElementById("inc").textContent=f(ti);
 document.getElementById("exp").textContent=f(te);
 document.getElementById("tot").textContent=f(ti-te);
 document.getElementById("sumI").innerHTML=bars(bi,ti,"");
-document.getElementById("sumE").innerHTML=bars(be,te,"e");
+document.getElementById("sumE").innerHTML=bars(be,te,"e")+(cq?'<div class="mu" style="margin-top:10px">মোট সিগারেট: '+bd(cq)+' টা</div>':"");
 var l="";
 data.slice().reverse().forEach(function(d){
 var i=data.indexOf(d);
 var inc=isInc(d);
-l+='<div class="r"><div><div class="'+(inc?"inc":"exp")+'">'+(inc?"+":"-")+f(d.a)+' · '+d.c+(inc&&d.w?' · '+d.w:'')+'</div><div class="mu">'+(d.n||"")+' '+d.d+'</div></div><button class="x" data-i="'+i+'">✕</button></div>';
+l+='<div class="r"><div><div class="'+(inc?"inc":"exp")+'">'+(inc?"+":"-")+f(d.a)+' · '+d.c+(inc&&d.w?' · '+d.w:'')+(d.q?' · '+bd(d.q)+'টা':'')+'</div><div class="mu">'+(d.n||"")+' '+d.d+'</div></div><button class="x" data-i="'+i+'">✕</button></div>';
 });
 document.getElementById("list").innerHTML=l||'<div class="mu">এখনো কিছু নেই</div>';
 }
@@ -189,11 +191,19 @@ var nt=note||((d.w||"")+(c===C_PAY?" কে ধার শোধ":" এর কা
 data.push({a:a,t:c===C_PAY?"e":"i",c:c,w:c===C_GET?d.w:"",n:nt,d:ds,ref:ref});
 sheet={amount:a,category:c,note:nt,type:c===C_PAY?"খরচ":"টাকা পেয়েছি",from:c===C_GET?d.w:""};
 }else{
-var inc=type==="i";
-data.push({a:a,t:type,c:c,w:inc?who:"",n:note,d:ds});
-sheet={amount:a,category:c,note:note,type:inc?"টাকা পেয়েছি":"খরচ",from:inc?who:""};
+var inc=type==="i",q=0,sn=note;
+if(!inc&&c===C_CIG){
+q=parseInt(document.getElementById("qty").value,10);
+if(!(q>0)){alert("কয়টা সিগারেট খেয়েছ, সংখ্যাটা লেখো");return}
+sn=(note?note+" · ":"")+bd(q)+"টা সিগারেট";
 }
-document.getElementById("amt").value="";document.getElementById("note").value="";document.getElementById("who").value="";document.getElementById("due").value="";
+var item={a:a,t:type,c:c,w:inc?who:"",n:note,d:ds};
+if(q>0)item.q=q;
+data.push(item);
+sheet={amount:a,category:c,note:sn,type:inc?"টাকা পেয়েছি":"খরচ",from:inc?who:""};
+if(q>0)sheet.qty=q;
+}
+document.getElementById("amt").value="";document.getElementById("note").value="";document.getElementById("who").value="";document.getElementById("due").value="";document.getElementById("qty").value="";
 sendToSheet(sheet);
 save();saveD();render();renderDebts();updateFields();
 };
