@@ -33,11 +33,13 @@ input[type=date]{color-scheme:light dark;min-height:44px;cursor:pointer}
 .v{font-size:22px;font-weight:700}
 .inc{color:var(--ac)}
 .exp{color:var(--rd)}
-.tg{display:flex;gap:8px}
-.tg button{margin-top:0;background:var(--bg);color:var(--mu);border:1px solid var(--bd)}
+.tg{display:flex;gap:8px;flex-wrap:wrap}
+.tg button{margin-top:0;background:var(--bg);color:var(--mu);border:1px solid var(--bd);flex:1}
 .tg button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
 .tg button.on.e{background:var(--rd);border-color:var(--rd)}
+.tg button.on.shop{background:#d97706;border-color:#d97706}
 #add.e{background:var(--rd)}
+#add.shop{background:#d97706}
 </style>
 </head>
 <body>
@@ -54,13 +56,13 @@ input[type=date]{color-scheme:light dark;min-height:44px;cursor:pointer}
 <div class="tg">
 <button id="tE" class="on e" type="button">খরচ</button>
 <button id="tI" type="button">টাকা পেয়েছি</button>
+<button id="tS" type="button">দোকানের বাকি</button>
 </div>
 <input id="amt" type="number" inputmode="decimal" placeholder="টাকার পরিমাণ">
 <select id="cat"></select>
-<select id="shopT" style="display:none"><option>খাবার</option><option>সিগারেট</option><option>নগদ টাকা</option></select>
-<input id="qty" type="number" inputmode="numeric" min="1" step="1" placeholder="কয়টা সিগারেট?" style="display:none">
 <select id="dsel" style="display:none"></select>
-<input id="who" style="display:none">
+<input id="who" style="display:none" placeholder="নাম">
+<input id="shopName" style="display:none" placeholder="দোকানের নাম">
 <div class="mu" id="dueL" style="display:none;margin-top:8px"></div>
 <input id="due" type="date" style="display:none;margin-top:4px">
 <input id="note" placeholder="বিবরণ (ঐচ্ছিক)">
@@ -70,6 +72,7 @@ input[type=date]{color-scheme:light dark;min-height:44px;cursor:pointer}
 <div class="mu" id="dTot"></div>
 <div id="dlist" style="margin-top:6px"></div>
 </div>
+<div class="c"><b>দোকানের বাকি হিসাব</b><div id="sumShop"></div></div>
 <div class="c"><b>কার কাছ থেকে পেয়েছি</b><div id="sumI"></div></div>
 <div class="c"><b>ক্যাটাগরি অনুযায়ী খরচ</b><div id="sumE"></div></div>
 <div class="c"><b>সাম্প্রতিক হিসাব</b><div id="list"></div></div>
@@ -93,12 +96,13 @@ q.forEach(function(it){post(it).catch(function(){var r=getQ();r.push(it);setQ(r)
 }
 window.addEventListener("online",flush);
 
-var C_CIG="সিগারেট",C_SHOP="নিজের দোকান",S_FOOD="খাবার",S_CASH="নগদ টাকা",C_BORROW="ধার নিয়েছি",C_LEND="ধার দিয়েছি",C_PAY="ধার শোধ করলাম",C_GET="ধার ফেরত পেলাম";
+var C_BORROW="ধার নিয়েছি",C_LEND="ধার দিয়েছি",C_PAY="ধার শোধ করলাম",C_GET="ধার ফেরত পেলাম";
 var CATS={
-e:["খাবার","যাতায়াত","পড়াশোনা","ক্যারাম খেলা",C_CIG,C_SHOP,"অন্যান্য",C_PAY,C_LEND],
-i:["উপহার","সাহায্য","অন্যান্য",C_BORROW,C_GET]
+e:["খাবার","যাতায়াত","পড়াশোনা","বিনোদন","অন্যান্য",C_PAY,C_LEND],
+i:["উপহার","সাহায্য","অন্যান্য",C_BORROW,C_GET],
+s:["বাকি সদাই","অন্যান্য দোকান"]
 };
-var type="e";
+var type="e"; // 'e' for expense, 'i' for income, 's' for shop
 var data=[];
 try{data=JSON.parse(localStorage.getItem("exp")||"[]")}catch(e){}
 function save(){try{localStorage.setItem("exp",JSON.stringify(data))}catch(e){}}
@@ -111,39 +115,57 @@ var sel=document.getElementById("dsel");
 if(c!==C_PAY&&c!==C_GET){sel.style.display="none";return}
 var dir=c===C_PAY?"b":"l";
 var open=debts.filter(function(d){return d.dir===dir&&remOf(d)>0});
-sel.innerHTML=open.length?open.map(function(d){return '<option value="'+d.id+'">'+(d.w||"নাম নেই")+' — বাকি '+f(remOf(d))+'</option>'}).join(""):'<option value="">'+(dir==="b"?"কারো কাছে ধার বাকি নেই":"কেউ ধার ফেরত দেওয়ার বাকি নেই")+'</option>';
+sel.innerHTML=open.length?open.map(function(d){return '<option value="'+d.id+'">'+(d.w||"নাম নেই")+' — বাকি '+f(remOf(d))+'</option>j'}.join(""):'<option value="">'+(dir==="b"?"কারো কাছে ধার বাকি নেই":"কেউ ধার ফেরত দেওয়ার বাকি নেই")+'</option>';
 sel.style.display="block";
 }
+
 function updateFields(){
-var c=document.getElementById("cat").value,e=type==="e";
+var c=document.getElementById("cat").value;
 var add=document.getElementById("add");
-add.className=e?"e":"";
-var lbl={};lbl[C_BORROW]="ধার নেওয়া যোগ করো";lbl[C_LEND]="ধার দেওয়া যোগ করো";lbl[C_PAY]="ধার শোধ যোগ করো";lbl[C_GET]="ফেরত পাওয়া যোগ করো";
-add.textContent=lbl[c]||(e?"খরচ যোগ করো":"টাকা যোগ করো");
-var needSel=(c===C_PAY||c===C_GET),needDue=(c===C_BORROW||c===C_LEND),needWho=!needSel&&(type==="i"||c===C_LEND);
-var shopOn=e&&c===C_SHOP,shopT=document.getElementById("shopT");
-shopT.style.display=shopOn?"block":"none";
-document.getElementById("qty").style.display=(e&&(c===C_CIG||(shopOn&&shopT.value===C_CIG)))?"block":"none";
 var who=document.getElementById("who");
+var shopInput=document.getElementById("shopName");
+
+who.style.display="none";
+shopInput.style.display="none";
+document.getElementById("dueL").style.display="none";
+document.getElementById("due").style.display="none";
+
+if(type==="s"){
+add.className="shop";
+add.textContent="দোকানের বাকি যোগ করো";
+shopInput.style.display="block";
+} else if(type==="e"){
+add.className="e";
+var lbl={};lbl[C_BORROW]="ধার নেওয়া যোগ করো";lbl[C_LEND]="ধার দেওয়া যোগ করো";lbl[C_PAY]="ধার শোধ যোগ করো";lbl[C_GET]="ফেরত পাওয়া যোগ করো";
+add.textContent=lbl[c]||"খরচ যোগ করো";
+var needSel=(c===C_PAY||c===C_GET),needDue=(c===C_BORROW||c===C_LEND),needWho=!needSel&&(c===C_LEND);
 who.style.display=needWho?"block":"none";
-who.placeholder=c===C_BORROW?"কার কাছ থেকে নিয়েছ? (নাম)":c===C_LEND?"কাকে ধার দিয়েছ? (নাম)":"কার কাছ থেকে পেয়েছি? (ঐচ্ছিক)";
+who.placeholder="কাকে ধার দিয়েছ? (নাম)";
 document.getElementById("dueL").style.display=needDue?"block":"none";
 document.getElementById("due").style.display=needDue?"block":"none";
-document.getElementById("dueL").textContent=c===C_BORROW?"ফেরত দেওয়ার তারিখ (ঐচ্ছিক, ট্যাপ করে বেছে নিন)":"ফেরত পাওয়ার তারিখ (ঐচ্ছিক, ট্যাপ করে বেছে নিন)";
 fillDsel(c);
+} else {
+add.className="";
+add.textContent="টাকা যোগ করো";
+var needWho=(c===C_BORROW);
+who.style.display=needWho?"block":"none";
+who.placeholder="কার কাছ থেকে নিয়েছ? (নাম)";
 }
+}
+
 function setType(t){
 type=t;
-var e=t==="e";
-document.getElementById("tE").className=e?"on e":"";
-document.getElementById("tI").className=e?"":"on";
+document.getElementById("tE").className=(t==="e"?"on e":"");
+document.getElementById("tI").className=(t==="i"?"on":"");
+document.getElementById("tS").className=(t==="s"?"on shop":"");
 document.getElementById("cat").innerHTML=CATS[t].map(function(c){return "<option>"+c+"</option>"}).join("");
 updateFields();
 }
+
 document.getElementById("cat").onchange=updateFields;
-document.getElementById("shopT").onchange=updateFields;
 document.getElementById("tE").onclick=function(){setType("e")};
 document.getElementById("tI").onclick=function(){setType("i")};
+document.getElementById("tS").onclick=function(){setType("s")};
 
 function bars(by,total,cls){
 var s="";
@@ -155,21 +177,25 @@ return s||'<div class="mu">এখনো কিছু নেই</div>';
 }
 
 function render(){
-var ti=0,te=0,bi={},be={},cq=0,bs={};
+var ti=0,te=0,bi={},be={},bs={};
 data.forEach(function(d){
 if(isInc(d)){var w=d.w||"নাম দেওয়া নেই";ti+=d.a;bi[w]=(bi[w]||0)+d.a}
-else{te+=d.a;be[d.c]=(be[d.c]||0)+d.a;if(d.q)cq+=d.q;if(d.s)bs[d.s]=(bs[d.s]||0)+d.a}
+else if(d.t==="s"){var sName=d.shop||"অন্যান্য দোকান";bs[sName]=(bs[sName]||0)+d.a}
+else{te+=d.a;be[d.c]=(be[d.c]||0)+d.a}
 });
 document.getElementById("inc").textContent=f(ti);
 document.getElementById("exp").textContent=f(te);
 document.getElementById("tot").textContent=f(ti-te);
+document.getElementById("sumShop").innerHTML=bars(bs,0,"shop");
 document.getElementById("sumI").innerHTML=bars(bi,ti,"");
-document.getElementById("sumE").innerHTML=bars(be,te,"e")+(Object.keys(bs).length?'<div class="mu" style="margin-top:10px">নিজের দোকান: '+Object.keys(bs).map(function(k){return k+" "+f(bs[k])}).join(" · ")+'</div>':"")+(cq?'<div class="mu" style="margin-top:6px">মোট সিগারেট: '+bd(cq)+' টা</div>':"");
+document.getElementById("sumE").innerHTML=bars(be,te,"e");
 var l="";
 data.slice().reverse().forEach(function(d){
 var i=data.indexOf(d);
-var inc=isInc(d);
-l+='<div class="r"><div><div class="'+(inc?"inc":"exp")+'">'+(inc?"+":"-")+f(d.a)+' · '+d.c+(d.s?' · '+d.s:'')+(inc&&d.w?' · '+d.w:'')+(d.q?' · '+bd(d.q)+'টা':'')+'</div><div class="mu">'+(d.n||"")+' '+d.d+'</div></div><button class="x" data-i="'+i+'">✕</button></div>';
+var inc=isInc(d), shopTr=d.t==="s";
+var symbol=inc?"+":(shopTr?"":"-");
+var desc=shopTr?("দোকান: "+d.shop+" ("+d.c+")"): (d.c+(inc&&d.w?' · '+d.w:''));
+l+='<div class="r"><div><div class="'+(inc?"inc":(shopTr?"":"exp"))+'">'+symbol+f(d.a)+' · '+desc+'</div><div class="mu">'+(d.n||"")+' '+d.d+'</div></div><button class="x" data-i="'+i+'">✕</button></div>';
 });
 document.getElementById("list").innerHTML=l||'<div class="mu">এখনো কিছু নেই</div>';
 }
@@ -177,8 +203,13 @@ document.getElementById("list").innerHTML=l||'<div class="mu">এখনো ক�
 document.getElementById("add").onclick=function(){
 var a=parseFloat(document.getElementById("amt").value);
 if(!(a>0))return;
-var c=document.getElementById("cat").value,note=clean(document.getElementById("note").value),who=clean(document.getElementById("who").value),due=document.getElementById("due").value,ds=today0(),sheet;
-if(c===C_BORROW||c===C_LEND){
+var c=document.getElementById("cat").value,note=clean(document.getElementById("note").value),who=clean(document.getElementById("who").value),shopName=clean(document.getElementById("shopName").value),due=document.getElementById("due").value,ds=today0(),sheet;
+
+if(type==="s"){
+if(!shopName){alert("দোকানের নাম লিখুন");return}
+data.push({a:a,t:"s",c:c,shop:shopName,n:note,d:ds});
+sheet={amount:a,category:c,note:note,type:"দোকানের বাকি",shop:shopName};
+}else if(c===C_BORROW||c===C_LEND){
 if(!who){alert("কার সাথে ধারের লেনদেন, সেই নামটা লেখো");return}
 var id=Date.now(),lent=c===C_LEND;
 debts.push({id:id,a:a,w:who,due:due,dir:lent?"l":"b",pays:[]});
@@ -195,25 +226,15 @@ var nt=note||((d.w||"")+(c===C_PAY?" কে ধার শোধ":" এর কা
 data.push({a:a,t:c===C_PAY?"e":"i",c:c,w:c===C_GET?d.w:"",n:nt,d:ds,ref:ref});
 sheet={amount:a,category:c,note:nt,type:c===C_PAY?"খরচ":"টাকা পেয়েছি",from:c===C_GET?d.w:""};
 }else{
-var inc=type==="i",q=0,sn=note,st="";
-if(!inc&&c===C_SHOP){st=document.getElementById("shopT").value;sn=(note?note+" · ":"")+"নিজের দোকান থেকে "+st}
-if(!inc&&(c===C_CIG||st===C_CIG)){
-q=parseInt(document.getElementById("qty").value,10);
-if(!(q>0)){alert("কয়টা সিগারেট, সংখ্যাটা লেখো");return}
-sn=(sn?sn+" · ":"")+bd(q)+"টা সিগারেট";
+var inc=type==="i";
+data.push({a:a,t:type,c:c,w:inc?who:"",n:note,d:ds});
+sheet={amount:a,category:c,note:note,type:inc?"টাকা পেয়েছি":"খরচ",from:inc?who:""};
 }
-var item={a:a,t:type,c:c,w:inc?who:"",n:note,d:ds};
-if(st)item.s=st;
-if(q>0)item.q=q;
-data.push(item);
-sheet={amount:a,category:c,note:sn,type:inc?"টাকা পেয়েছি":"খরচ",from:inc?who:""};
-if(q>0)sheet.qty=q;
-if(st)sheet.shop=st;
-}
-document.getElementById("amt").value="";document.getElementById("note").value="";document.getElementById("who").value="";document.getElementById("due").value="";document.getElementById("qty").value="";
+document.getElementById("amt").value="";document.getElementById("note").value="";document.getElementById("who").value="";document.getElementById("shopName").value="";document.getElementById("due").value="";
 sendToSheet(sheet);
 save();saveD();render();renderDebts();updateFields();
 };
+
 document.getElementById("list").onclick=function(e){
 var i=e.target.getAttribute("data-i");
 if(i!==null){data.splice(+i,1);save();render()}
@@ -233,6 +254,7 @@ if(!d.pays)d.pays=d.p?[{a:d.a,ref:d.id}]:[];
 saveD();
 function paidOf(d){return d.pays.reduce(function(s,p){return s+p.a},0)}
 function remOf(d){return Math.max(0,Math.round((d.a-paidOf(d))*100)/100)}
+
 function renderDebts(){
 var owe=0,recv=0,order=debts.map(function(d,i){return i});
 order.sort(function(x,y){
@@ -265,6 +287,7 @@ if(recv>0)parts.push("আমার পাওনা: "+f(recv));
 document.getElementById("dTot").textContent=parts.length?parts.join(" · "):(debts.length?"সব ধার মিটে গেছে":"");
 document.getElementById("dlist").innerHTML=l||'<div class="mu">এখনো কোনো ধার নেই</div>';
 }
+
 var dueEl=document.getElementById("due");
 dueEl.onclick=dueEl.onfocus=function(){try{if(this.showPicker)this.showPicker()}catch(e){}};
 document.getElementById("dlist").onclick=function(e){
@@ -273,7 +296,7 @@ if(i===null)return;
 var act=e.target.getAttribute("data-act"),d=debts[+i];
 if(!d)return;
 if(act==="x"){
-if(!confirm("এই ধারের সব হিসাব (হাতে থাকা টাকার যোগ-বিয়োগসহ) অ্যাপ থেকে সরে যাবে। মুছবে?"))return;
+if(!confirm("এই ধারের সব হিসাব অ্যাপ থেকে সরে যাবে। মুছবে?"))return;
 data=data.filter(function(x){var r=String(x.ref||"");return !(r==="i"+d.id||r===String(d.id)||r.indexOf(d.id+"-")===0)});
 debts.splice(+i,1);
 }else if(act==="u"){
