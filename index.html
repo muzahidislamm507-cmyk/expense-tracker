@@ -25,6 +25,7 @@ button{background:var(--ac);color:#fff;border:0;font-weight:600;cursor:pointer}
 .x{background:none;color:var(--rd);width:auto;margin:0;padding:4px 8px}
 .bar{height:8px;background:var(--ac);border-radius:4px;margin-top:4px}
 .bar.e{background:var(--rd)}
+.bar.shop{background:#d97706}
 input[type=date]{color-scheme:light dark;min-height:44px;cursor:pointer}
 .pd{background:none;color:var(--ac);width:auto;margin:0 6px 0 0;padding:6px 10px;border:1px solid var(--ac);border-radius:8px;font-size:14px}
 .late{color:var(--rd)}
@@ -61,7 +62,7 @@ input[type=date]{color-scheme:light dark;min-height:44px;cursor:pointer}
 <input id="amt" type="number" inputmode="decimal" placeholder="টাকার পরিমাণ">
 <select id="cat"></select>
 <select id="dsel" style="display:none"></select>
-<input id="who" style="display:none" placeholder="নাম">
+<input id="who" style="display:none">
 <input id="shopName" style="display:none" placeholder="দোকানের নাম">
 <div class="mu" id="dueL" style="display:none;margin-top:8px"></div>
 <input id="due" type="date" style="display:none;margin-top:4px">
@@ -102,7 +103,7 @@ e:["খাবার","যাতায়াত","পড়াশোনা","ব�
 i:["উপহার","সাহায্য","অন্যান্য",C_BORROW,C_GET],
 s:["বাকি সদাই","অন্যান্য দোকান"]
 };
-var type="e"; // 'e' for expense, 'i' for income, 's' for shop
+var type="e";
 var data=[];
 try{data=JSON.parse(localStorage.getItem("exp")||"[]")}catch(e){}
 function save(){try{localStorage.setItem("exp",JSON.stringify(data))}catch(e){}}
@@ -115,7 +116,7 @@ var sel=document.getElementById("dsel");
 if(c!==C_PAY&&c!==C_GET){sel.style.display="none";return}
 var dir=c===C_PAY?"b":"l";
 var open=debts.filter(function(d){return d.dir===dir&&remOf(d)>0});
-sel.innerHTML=open.length?open.map(function(d){return '<option value="'+d.id+'">'+(d.w||"নাম নেই")+' — বাকি '+f(remOf(d))+'</option>j'}.join(""):'<option value="">'+(dir==="b"?"কারো কাছে ধার বাকি নেই":"কেউ ধার ফেরত দেওয়ার বাকি নেই")+'</option>';
+sel.innerHTML=open.length?open.map(function(d){return '<option value="'+d.id+'">'+(d.w||"নাম নেই")+' — বাকি '+f(remOf(d))+'</option>'}).join(""):'<option value="">'+(dir==="b"?"কারো কাছে ধার বাকি নেই":"কেউ ধার ফেরত দেওয়ার বাকি নেই")+'</option>';
 sel.style.display="block";
 }
 
@@ -131,25 +132,25 @@ document.getElementById("dueL").style.display="none";
 document.getElementById("due").style.display="none";
 
 if(type==="s"){
-add.className="shop";
-add.textContent="দোকানের বাকি যোগ করো";
-shopInput.style.display="block";
+  add.className="shop";
+  add.textContent="দোকানের বাকি যোগ করো";
+  shopInput.style.display="block";
 } else if(type==="e"){
-add.className="e";
-var lbl={};lbl[C_BORROW]="ধার নেওয়া যোগ করো";lbl[C_LEND]="ধার দেওয়া যোগ করো";lbl[C_PAY]="ধার শোধ যোগ করো";lbl[C_GET]="ফেরত পাওয়া যোগ করো";
-add.textContent=lbl[c]||"খরচ যোগ করো";
-var needSel=(c===C_PAY||c===C_GET),needDue=(c===C_BORROW||c===C_LEND),needWho=!needSel&&(c===C_LEND);
-who.style.display=needWho?"block":"none";
-who.placeholder="কাকে ধার দিয়েছ? (নাম)";
-document.getElementById("dueL").style.display=needDue?"block":"none";
-document.getElementById("due").style.display=needDue?"block":"none";
-fillDsel(c);
+  add.className="e";
+  var lbl={};lbl[C_BORROW]="ধার নেওয়া যোগ করো";lbl[C_LEND]="ধার দেওয়া যোগ করো";lbl[C_PAY]="ধার শোধ যোগ করো";lbl[C_GET]="ফেরت পাওয়া যোগ করো";
+  add.textContent=lbl[c]||"খরচ যোগ করো";
+  var needSel=(c===C_PAY||c===C_GET),needDue=(c===C_BORROW||c===C_LEND),needWho=!needSel&&(c===C_LEND);
+  who.style.display=needWho?"block":"none";
+  who.placeholder="কাকে ধার দিয়েছ? (নাম)";
+  document.getElementById("dueL").style.display=needDue?"block":"none";
+  document.getElementById("due").style.display=needDue?"block":"none";
+  fillDsel(c);
 } else {
-add.className="";
-add.textContent="টাকা যোগ করো";
-var needWho=(c===C_BORROW);
-who.style.display=needWho?"block":"none";
-who.placeholder="কার কাছ থেকে নিয়েছ? (নাম)";
+  add.className="";
+  add.textContent="টাকা যোগ করো";
+  var needWho=(c===C_BORROW);
+  who.style.display=needWho?"block":"none";
+  who.placeholder="কার কাছ থেকে নিয়েছ? (নাম)";
 }
 }
 
