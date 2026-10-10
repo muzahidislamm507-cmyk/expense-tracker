@@ -52,6 +52,7 @@ input[type=date]{color-scheme:light dark;min-height:44px;cursor:pointer}
 <body>
 <div class="w">
 <h1>💰 টাকা ও খরচের হিসাব</h1>
+<div id="mainView">
 <div class="c">
 <div class="g">
 <div><div class="mu">মোট পেয়েছি</div><div class="v inc" id="inc">৳০</div></div>
@@ -59,7 +60,8 @@ input[type=date]{color-scheme:light dark;min-height:44px;cursor:pointer}
 <div><div class="mu">দোকানের বাকি</div><div class="v sh" id="shT">৳০</div></div>
 <div><div class="mu">নিজের দোকান</div><div class="v sh" id="owT">৳০</div></div>
 <div id="gOwe"><div class="mu">আমার দেনা (ট্যাপ করুন)</div><div class="v exp" id="oweT">৳০</div></div>
-<div><div class="mu">আমার পাওনা</div><div class="v inc" id="recT">৳০</div></div>
+<div id="gRec" style="cursor:pointer"><div class="mu">আমার পাওনা (ট্যাপ করুন)</div><div class="v inc" id="recT">৳০</div></div>
+<div id="gCig" style="grid-column:1/-1;cursor:pointer"><div class="mu">সিগারেট (ট্যাপ করে হিসাব দেখুন)</div><div class="v sh" id="cgTop">৳০ · ০ টা</div></div>
 </div>
 <div style="margin-top:12px"><div class="mu">হাতে আছে (পাওয়া − খরচ)</div><div class="tot" id="tot">৳০</div></div>
 </div>
@@ -88,6 +90,41 @@ input[type=date]{color-scheme:light dark;min-height:44px;cursor:pointer}
 <div class="c"><b>কার কাছ থেকে পেয়েছি</b><div id="sumI"></div></div>
 <div class="c"><b>ক্যাটাগরি অনুযায়ী খরচ</b><div id="sumE"></div></div>
 <div class="c"><b>এইমাত্র যোগ করা (১০ মিনিট পর্যন্ত বাতিল করা যাবে)</b><div id="list"></div></div>
+</div>
+<div id="debtView" style="display:none">
+<div class="g" style="align-items:start">
+<div class="c" style="margin:0">
+<button id="vB" type="button" class="e" style="margin-top:0;background:var(--rd)">ধার নিয়েছি +</button>
+<div class="mu" style="margin-top:8px">আমার দেনা</div>
+<div class="v exp" id="vBT">৳০</div>
+<div id="vBL"></div>
+</div>
+<div class="c" style="margin:0">
+<button id="vL" type="button" style="margin-top:0">ধার দিয়েছি +</button>
+<div class="mu" style="margin-top:8px">আমার পাওনা</div>
+<div class="v inc" id="vLT">৳০</div>
+<div id="vLL"></div>
+</div>
+</div>
+</div>
+<div id="cigView" style="display:none">
+<div class="c"><b>তারিখ দিয়ে দেখুন</b>
+<input id="cgDate" type="date">
+<div id="cgDay" style="margin-top:10px"></div>
+</div>
+<div class="c">
+<div class="g">
+<div><div class="mu">মোট সিগারেটে খরচ</div><div class="v sh" id="cgA">৳০</div></div>
+<div><div class="mu">মোট সিগারেট</div><div class="v sh" id="cgC">০ টা</div></div>
+<div><div class="mu">আজ খরচ</div><div class="v sh" id="cgTA">৳০</div></div>
+<div><div class="mu">আজ সিগারেট</div><div class="v sh" id="cgTC">০ টা</div></div>
+</div>
+<div class="mu" id="cgAvg" style="margin-top:10px"></div>
+</div>
+<div class="c"><b>কোথা থেকে কত</b><div id="cgSrc"></div></div>
+<div class="c"><b>দিনে দিনে হিসাব</b><div id="cgDays"></div></div>
+<div class="c"><b>সিগারেটের সব হিসাব</b><div id="cgList"></div></div>
+</div>
 </div>
 
 <div class="nav">
@@ -123,7 +160,9 @@ e:["খাবার","যাতায়াত","পড়াশোনা","ক�
 i:["উপহার","সাহায্য","অন্যান্য",C_BORROW,C_GET],
 s:["খাবার",C_CIG,"অন্যান্য"],
 o:["খাবার",C_CIG,"নগদ টাকা"],
-d:[C_BORROW,C_PAY]
+d:[C_BORROW,C_PAY],
+c:[],
+v:[]
 };
 var type="e";
 var data=[];
@@ -143,6 +182,7 @@ sel.style.display="block";
 }
 
 function updateFields(){
+if(type==="c"||type==="v")return;
 var c=document.getElementById("cat").value;
 var add=document.getElementById("add");
 var who=document.getElementById("who");
@@ -152,7 +192,7 @@ show("cat",type!=="d");
 show("dsub",type==="d");
 document.getElementById("bB").className=(type==="d"&&c===C_BORROW)?"on":"";
 document.getElementById("bP").className=(type==="d"&&c===C_PAY)?"on":"";
-show("cnt",(type==="e"||type==="o")&&c===C_CIG);
+show("cnt",(type==="e"||type==="o"||type==="s")&&c===C_CIG);
 if(type==="s"){
   add.className="shop";
   add.textContent="দোকানের বাকি যোগ করো";
@@ -182,6 +222,11 @@ document.getElementById("tI").className=(t==="i"?"on":"");
 document.getElementById("tS").className=(t==="s"?"on shop":"");
 document.getElementById("tO").className=(t==="o"?"on shop":"");
 document.getElementById("tD").className=(t==="d"?"on e":"");
+document.getElementById("mainView").style.display=(t==="c"||t==="v"?"none":"block");
+document.getElementById("debtView").style.display=(t==="v"?"block":"none");
+if(t==="v")renderDebtView();
+document.getElementById("cigView").style.display=(t==="c"?"block":"none");
+if(t==="c")renderCig();
 document.getElementById("cat").innerHTML=CATS[t].map(function(c){return "<option>"+c+"</option>"}).join("");
 updateFields();
 }
@@ -192,7 +237,14 @@ document.getElementById("tI").onclick=function(){setType("i")};
 document.getElementById("tS").onclick=function(){setType("s")};
 document.getElementById("tO").onclick=function(){setType("o")};
 document.getElementById("tD").onclick=function(){setType("d")};
-document.getElementById("gOwe").onclick=function(){setType("d");window.scrollTo({top:0,behavior:"smooth"})};
+document.getElementById("gCig").onclick=function(){setType("c");window.scrollTo({top:0})};
+var cgd=document.getElementById("cgDate");
+cgd.onchange=renderCig;
+cgd.onclick=cgd.onfocus=function(){try{if(this.showPicker)this.showPicker()}catch(e){}};
+document.getElementById("gOwe").onclick=function(){setType("v");window.scrollTo({top:0})};
+document.getElementById("gRec").onclick=function(){setType("v");window.scrollTo({top:0})};
+document.getElementById("vB").onclick=function(){setType("d");document.getElementById("cat").value=C_BORROW;updateFields();window.scrollTo({top:0})};
+document.getElementById("vL").onclick=function(){setType("e");document.getElementById("cat").value=C_LEND;updateFields();window.scrollTo({top:0})};
 document.getElementById("bB").onclick=function(){document.getElementById("cat").value=C_BORROW;updateFields()};
 document.getElementById("bP").onclick=function(){document.getElementById("cat").value=C_PAY;updateFields()};
 
@@ -235,18 +287,55 @@ var left=Math.max(1,Math.ceil((W-(now-d.ts))/60000));
 l+='<div class="r"><div><div class="'+(inc?"inc":((shopTr||own)?"sh":"exp"))+'">'+symbol+f(d.a)+' · '+desc+'</div><div class="mu">'+(d.n?d.n+' · ':'')+'আর '+bd(left)+' মিনিট বাতিল করা যাবে</div></div><button class="pd" data-i="'+i+'">বাতিল</button></div>';
 });
 document.getElementById("list").innerHTML=l||'<div class="mu">গত ১০ মিনিটে কিছু যোগ করা হয়নি</div>';
+renderCig();
+}
+
+function renderCig(){
+var T=today0(),rows=[],ta=0,tc=0,xa=0,xc=0;
+var src={e:{n:"খরচ থেকে",a:0,c:0},s:{n:"দোকানের বাকি থেকে",a:0,c:0},o:{n:"নিজের দোকান থেকে",a:0,c:0}};
+data.forEach(function(d){
+if(d.c!==C_CIG||!src[d.t])return;
+rows.push(d);
+var n=d.cnt||0;
+ta+=d.a;tc+=n;src[d.t].a+=d.a;src[d.t].c+=n;
+if(d.d===T){xa+=d.a;xc+=n}
+});
+document.getElementById("cgTop").textContent=f(ta)+" · "+bd(tc)+" টা";
+var days={},order=[];
+rows.forEach(function(d){var k=d.d||"তারিখ নেই";if(!days[k]){days[k]={a:0,c:0};order.push(k)}days[k].a+=d.a;days[k].c+=(d.cnt||0)});
+document.getElementById("cgDays").innerHTML=order.slice().reverse().map(function(k){
+return '<div class="r"><span>'+k+'</span><span class="sh">'+f(days[k].a)+' · '+bd(days[k].c)+' টা</span></div>'}).join("")||'<div class="mu">এখনো কিছু নেই</div>';
+var pick=document.getElementById("cgDate").value,dayEl=document.getElementById("cgDay");
+if(!pick){dayEl.innerHTML='<div class="mu">উপরে তারিখ বেছে নিন</div>'}
+else{
+var key=new Date(pick+"T00:00:00").toLocaleDateString("bn-BD"),x=days[key];
+dayEl.innerHTML=x?'<div class="v sh">'+bd(x.c)+' টা সিগারেট</div><div class="mu">'+key+' তারিখে খরচ '+f(x.a)+'</div>':'<div class="mu">'+key+' তারিখে কোনো সিগারেট খাওয়া হয়নি</div>';
+}
+document.getElementById("cgA").textContent=f(ta);
+document.getElementById("cgC").textContent=bd(tc)+" টা";
+document.getElementById("cgTA").textContent=f(xa);
+document.getElementById("cgTC").textContent=bd(xc)+" টা";
+document.getElementById("cgAvg").textContent=tc>0?"গড় দাম: প্রতি সিগারেট "+f(ta/tc):"";
+document.getElementById("cgSrc").innerHTML=Object.keys(src).map(function(k){
+var x=src[k];return '<div class="r"><span>'+x.n+'</span><span>'+f(x.a)+' · '+bd(x.c)+' টা</span></div>'}).join("");
+var l="";
+rows.slice().reverse().forEach(function(d){
+var nm=d.t==="s"?"দোকানের বাকি ("+(d.shop||"")+")":d.t==="o"?"নিজের দোকান":"খরচ";
+l+='<div class="r"><div><div class="sh">'+f(d.a)+(d.cnt?' · '+bd(d.cnt)+' টা':'')+'</div><div class="mu">'+nm+(d.n?' · '+d.n:'')+'</div></div><div class="mu">'+(d.d||"")+'</div></div>';
+});
+document.getElementById("cgList").innerHTML=l||'<div class="mu">এখনো সিগারেটের কোনো হিসাব নেই</div>';
 }
 
 document.getElementById("add").onclick=function(){
 var a=parseFloat(document.getElementById("amt").value);
 if(!(a>0))return;
 var c=document.getElementById("cat").value,note=clean(document.getElementById("note").value),who=clean(document.getElementById("who").value),shopName=clean(document.getElementById("shopName").value),due=document.getElementById("due").value,ds=today0(),sheet;
-var cnt=(c===C_CIG&&(type==="e"||type==="o"))?(parseInt(document.getElementById("cnt").value,10)||0):0;
+var cnt=(c===C_CIG&&(type==="e"||type==="o"||type==="s"))?(parseInt(document.getElementById("cnt").value,10)||0):0;
 
 if(type==="s"){
 if(!shopName){alert("দোকানের নাম লিখুন");return}
-data.push({a:a,t:"s",c:c,shop:shopName,n:note,d:ds,ts:Date.now()});
-sheet={amount:a,category:c,note:note,type:"দোকানের বাকি",shop:shopName};
+data.push({a:a,t:"s",c:c,cnt:cnt,shop:shopName,n:note,d:ds,ts:Date.now()});
+sheet={amount:a,category:c,note:note,type:"দোকানের বাকি",shop:shopName,cigs:cnt};
 }else if(type==="o"){
 data.push({a:a,t:"o",c:c,cnt:cnt,n:note,d:ds,ts:Date.now()});
 sheet={amount:a,category:c,note:note,type:"নিজের দোকান",cigs:cnt};
@@ -337,6 +426,29 @@ if(recv>0)parts.push("আমার পাওনা: "+f(recv));
 document.getElementById("oweT").textContent=f(owe);document.getElementById("recT").textContent=f(recv);
 document.getElementById("dTot").textContent=parts.length?parts.join(" · "):(debts.length?"সব ধার মিটে গেছে":"");
 document.getElementById("dlist").innerHTML=l||'<div class="mu">এখনো কোনো ধার নেই</div>';
+renderDebtView();
+}
+
+function renderDebtView(){
+var today=new Date();today.setHours(0,0,0,0);
+["b","l"].forEach(function(dir){
+var lent=dir==="l",tot=0,h="";
+debts.filter(function(d){return d.dir===dir&&remOf(d)>0}).sort(function(a,b){return (a.due||"9999").localeCompare(b.due||"9999")}).forEach(function(d){
+var rem=remOf(d);tot+=rem;
+var dl=lent?"কবে ফেরত দেবে: ":"কবে দিতে হবে: ",st=dl+"তারিখ দেওয়া নেই",cls="";
+if(d.due){
+var diff=Math.round((new Date(d.due+"T00:00:00")-today)/86400000);
+var dt=new Date(d.due+"T00:00:00").toLocaleDateString("bn-BD");
+st=dl+dt;
+if(diff<0){st+=" · "+bd(-diff)+" দিন দেরি";cls="late"}
+else if(diff===0){st+=" · আজই";cls="late"}
+else st+=" · আর "+bd(diff)+" দিন";
+}
+h+='<div style="padding:8px 0;border-top:1px solid var(--bd);margin-top:8px"><div><b>'+(d.w||"নাম নেই")+'</b></div><div class="'+(lent?"inc":"exp")+'">'+f(rem)+'</div><div class="mu '+cls+'">'+st+'</div></div>';
+});
+document.getElementById(lent?"vLT":"vBT").textContent=f(tot);
+document.getElementById(lent?"vLL":"vBL").innerHTML=h||'<div class="mu" style="margin-top:8px">কেউ নেই</div>';
+});
 }
 
 var dueEl=document.getElementById("due");
